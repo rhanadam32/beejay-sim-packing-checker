@@ -1,0 +1,48 @@
+Laporan packing 18/11/26
+Ag btf 150/250 = 64 mc
+Ks skl 2/3 = 4 mc
+Ks sko 3/5 = 7 mc
+Hs4c 170/190 = 2 mc
+Gb skl 170/200 = 2 mc
+Gb sko 170/200 = 2 mc
+Gb sko 200/230 = 5 mc
+T snpr 1/2 = 3 mc
+T snpr 2/3 = 5 mc
+Rse 1/2 = 39 mc
+Rse 2/3 = 21 mc
+SL 1/2 = 36 mc
+SL 2/3 = 10 mc
+SL syd 1/2 = 30 mc
+SL syd 2/3 = 16 mc 
+Ws 1/2 = 5 mc
+Ws 2/3 = 1 mc
+Pp skl 2/3 = 1 mc
+Jewfish 5/8 = 118 mc
+Bara skl 1/2 = 14 mc
+Bara skl 2/3 = 6 mc
+Bara skl 3/5 = 1 mc
+Bara skl 5/8 = 9 mc
+Bara cc 170/190 = 15 mc
+Pc mahi 170/200 = 11 mc
+Flake 120/140 = 10 mc
+Flake 140/160 = 43 mc
+Spmps p 120/140 = 25 mc
+Spmps IQF 120/140 = 76 mc
+Ct skl v 1/2 = 1 mc
+Ct skl v 2/3 = 1 mc
+Re sko 2/3 = 1 mc
+Re ski 3/5 = 2 mc
+B meat v = 8 mc
+B meat IQF 10/50 = 1 mc
+Snpr 60/80 = 29 mc
+Oc 125 = 81 mc
+Rfb 1000 = 19 mc
+
+ 
+Luke
+Ks sko nf 2/3 = 17 mc
+Spmps IQF sp 120/140 = 4 mc
+Re sko 5/8 = 3 mc
+B meat IQF 10/50 = 16 mc
+
+

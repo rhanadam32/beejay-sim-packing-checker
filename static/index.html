@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Packing Checker</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+</head>
+<body class="bg-slate-50 text-slate-900">
+<div id="app" class="max-w-6xl mx-auto p-6">
+  <h1 class="text-2xl font-bold mb-4">Packing Checker</h1>
+
+  <div class="flex gap-2 mb-4">
+    <button @click="tab='compare'" :class="tabBtn(tab==='compare')">Perbandingan</button>
+    <button @click="tab='master'" :class="tabBtn(tab==='master')">Master CRUD</button>
+    <button @click="tab='upload'" :class="tabBtn(tab==='upload')">Upload</button>
+  </div>
+
+  <!-- Upload -->
+  <div v-if="tab==='upload'" class="bg-white rounded-lg border p-4 space-y-4">
+    <div>
+      <label class="block text-sm font-medium mb-1">Upload Chat (.txt)</label>
+      <input type="file" accept=".txt" @change="uploadChat" class="block w-full text-sm">
+      <div class="mt-2 flex gap-2">
+        <button @click="resetChat" class="px-3 py-1 rounded-md border text-sm hover:bg-slate-100">Reset Chat</button>
+        <span v-if="chatCount" class="text-sm text-slate-600">Chat: {{ chatCount }} produk</span>
+      </div>
+    </div>
+    <div>
+      <label class="block text-sm font-medium mb-1">Upload Apps PDF</label>
+      <input type="file" accept=".pdf" @change="uploadPdf" class="block w-full text-sm">
+      <div class="mt-2 flex gap-2 items-center">
+        <button @click="resetPdf" class="px-3 py-1 rounded-md border text-sm hover:bg-slate-100">Reset PDF</button>
+        <span v-if="appsFile" class="text-sm text-slate-600">{{ appsFile }} ({{ appsCount }} produk)</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Compare -->
+  <div v-if="tab==='compare'" class="bg-white rounded-lg border p-4">
+    <div class="flex items-center gap-2 mb-3">
+      <button @click="loadCompare" class="px-3 py-1 rounded-md bg-slate-900 text-white text-sm">Refresh</button>
+      <select v-model="filter" class="border rounded-md px-2 py-1 text-sm">
+        <option value="all">Semua</option>
+        <option value="MISMATCH">Mismatch</option>
+        <option value="MISSING">Missing</option>
+        <option value="OK">OK</option>
+      </select>
+    </div>
+    <div class="overflow-auto">
+      <table class="w-full text-sm border-collapse">
+        <thead class="bg-slate-100">
+          <tr>
+            <th class="border px-2 py-1 text-left">#</th>
+            <th class="border px-2 py-1 text-left">Produk Chat</th>
+            <th class="border px-2 py-1">Chat</th>
+            <th class="border px-2 py-1 text-left">Produk Apps</th>
+            <th class="border px-2 py-1">Apps</th>
+            <th class="border px-2 py-1">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="r in filtered" :key="r.id">
+            <td class="border px-2 py-1">{{ r.id }}</td>
+            <td class="border px-2 py-1">{{ r.chat_name }}</td>
+            <td class="border px-2 py-1 text-center">{{ r.chat_found ? r.chat_qty : '-' }}</td>
+            <td class="border px-2 py-1">{{ r.apps_name }}</td>
+            <td class="border px-2 py-1 text-center">{{ r.apps_found ? r.apps_qty : '-' }}</td>
+            <td class="border px-2 py-1 text-center">
+              <span :class="badge(r.status)" class="px-2 py-0.5 rounded-full text-xs font-medium">{{ r.status }}</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Master CRUD -->
+  <div v-if="tab==='master'" class="bg-white rounded-lg border p-4 space-y-4">
+    <div class="flex gap-2">
+      <input v-model="newChat" placeholder="Master product chat" class="border rounded-md px-2 py-1 text-sm flex-1">
+      <input v-model="newApps" placeholder="Master product apps" class="border rounded-md px-2 py-1 text-sm flex-1">
+      <button @click="addMaster" class="px-3 py-1 rounded-md bg-slate-900 text-white text-sm">Tambah</button>
+    </div>
+    <div class="overflow-auto">
+      <table class="w-full text-sm border-collapse">
+        <thead class="bg-slate-100">
+          <tr>
+            <th class="border px-2 py-1">#</th>
+            <th class="border px-2 py-1 text-left">Chat</th>
+            <th class="border px-2 py-1 text-left">Apps</th>
+            <th class="border px-2 py-1">Aksi</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="m in masters" :key="m.id">
+            <td class="border px-2 py-1">{{ m.id }}</td>
+            <td class="border px-2 py-1">
+              <input v-if="editing===m.id" v-model="editChat" class="border rounded px-1 py-0.5 w-full">
+              <span v-else>{{ m.chat_name }}</span>
+            </td>
+            <td class="border px-2 py-1">
+              <input v-if="editing===m.id" v-model="editApps" class="border rounded px-1 py-0.5 w-full">
+              <span v-else>{{ m.apps_name }}</span>
+            </td>
+            <td class="border px-2 py-1 text-center space-x-1">
+              <template v-if="editing===m.id">
+                <button @click="saveEdit(m.id)" class="px-2 py-0.5 rounded bg-green-600 text-white text-xs">Simpan</button>
+                <button @click="editing=null" class="px-2 py-0.5 rounded border text-xs">Batal</button>
+              </template>
+              <template v-else>
+                <button @click="startEdit(m)" class="px-2 py-0.5 rounded border text-xs hover:bg-slate-100">Edit</button>
+                <button @click="deleteMaster(m.id)" class="px-2 py-0.5 rounded bg-red-600 text-white text-xs">Hapus</button>
+              </template>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

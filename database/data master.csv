@@ -1,4 +1,4 @@
-﻿ide;master_product_chat;master_product_apps
+ide;master_product_chat;master_product_apps
 1;Ag btf 150/250;Goldband / King Snapper Butterfly 7501, 150/250 g, Skin on, Natural fillet, IVP, 5kg
 2;Ks skl 2/3;Goldband / King snapper 7301, 200/300 g, Skinless, Natural fillet, IWP, 5kg
 3;Ks sko 3/5;Goldband / King snapper 7546, 300/500 g, Skin on, Natural fillet, IWP, 5kg
@@ -32,8 +32,8 @@
 31;Ct skl v 2/3;Coral Trout 7222, 200/300 g, Skinless, Natural fillet, IVP, 5kg
 32;Re sko 2/3;Red Emperor 4516, 200/300 g, Skin on, Natural fillet, IVP, 5kg
 33;Re sko 3/5;Red Emperor 4517, 300/500 g, Skin on, Natural fillet, IVP, 5kg
-34;B meat v;Bug Meat raw IQF 1232, 10/50 g, Meat, Meat only, IQF, 10kg
-35;B meat IQF 10/50;Bug meat raw 1233, 50+ g, Meat, Meat only, IVP, 8kg
+34;B meat v;Bug meat raw 1233, 50+ g, Meat, Meat only, IVP, 8kg
+35;B meat IQF 10/50;Bug Meat raw IQF 1232, 10/50 g, Meat, Meat only, IQF, 10kg
 36;Snpr 60/80;Snapper small fillet 38323, 60/80 g, Skinless, Presliced, IQF, 5kg
 37;Oc 125;Ocean Chef 2553, 8x125 g, Skin on, Portion, IVP, 6kg
 38;Rfb 1000;Reef Fish Bites 1873, 1000 g, Skinless, Portion, IQF, 5 Kg
@@ -41,3 +41,8 @@
 40;Luke Spmps IQF sp 120/140;Spanish mackerel Premium 1001, 120/140 g, Skinless, Natural fillet, IVP, 5 Kg
 41;Luke Re sko 5/8;Red Emperor fillets 1027, 500/800 g, Skin on, Natural fillet, IVP, 5 kg
 42;Luke B meat IQF 10/50;Bug meat raw 1101, 10x1 g, Meat, Meat only, IQF, 5 kg
+43;Pc cobia 120;Cobia 7219, 120 g, Skinless, Portion, IVP, 5kg
+44;Mahi oz 1,5/2;Mahi Mahi Portion 1.5-2 oz 7717, g, Skinless, Portion, IVP, 4.5 Kg
+45;Mahi oz 2/4;Mahi Mahi Portion 2-4 oz 7716, g, Skinless, Portion, IVP, 4.5 Kg
+46;Luke B meat v;Bug Meat raw IQF 1232, 10/50 g, Meat, Meat only, IQF, 10kg
+47;Luke T snpr 2/3;Tropical Snapper Fillets 1004, 200/300 g, Skinless, Natural fillet, IWP, 5 Kg

@@ -9,7 +9,11 @@ createApp({
       appsFile: '',
       appsCount: 0,
       chatCount: 0,
+      unmatched: { chat: [], apps: [] },
       masters: [],
+      searchCompare: '',
+      searchMaster: '',
+      chatPaste: '',
       newChat: '',
       newApps: '',
       editing: null,
@@ -19,8 +23,16 @@ createApp({
   },
   computed: {
     filtered() {
-      if (this.filter === 'all') return this.rows;
-      return this.rows.filter(r => r.status === this.filter);
+      let r = this.rows;
+      if (this.filter !== 'all') r = r.filter(x => x.status === this.filter);
+      const q = this.searchCompare.toLowerCase();
+      if (q) r = r.filter(x => (x.chat_name + ' ' + x.apps_name + ' ' + x.status).toLowerCase().includes(q));
+      return r;
+    },
+    filteredMasters() {
+      const q = this.searchMaster.toLowerCase();
+      if (!q) return this.masters;
+      return this.masters.filter(m => (m.chat_name + ' ' + m.apps_name).toLowerCase().includes(q));
     }
   },
   methods: {
@@ -42,6 +54,11 @@ createApp({
       const res = await fetch('/api/masters');
       this.masters = await res.json();
     },
+    async loadUnmatched() {
+      const res = await fetch('/api/unmatched');
+      const j = await res.json();
+      this.unmatched = { chat: j.chat || [], apps: j.apps || [] };
+    },
     async uploadChat(e) {
       const file = e.target.files[0];
       if (!file) return;
@@ -50,6 +67,19 @@ createApp({
       const res = await fetch('/api/upload-chat', { method: 'POST', body: fd });
       const j = await res.json();
       this.chatCount = j.count;
+      await this.loadUnmatched();
+      await this.loadCompare();
+    },
+    async uploadChatPaste() {
+      if (!this.chatPaste.trim()) return;
+      const res = await fetch('/api/upload-chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: this.chatPaste })
+      });
+      const j = await res.json();
+      this.chatCount = j.count;
+      await this.loadUnmatched();
       await this.loadCompare();
     },
     async uploadPdf(e) {
@@ -61,17 +91,20 @@ createApp({
       const j = await res.json();
       this.appsFile = j.file;
       this.appsCount = j.count;
+      await this.loadUnmatched();
       await this.loadCompare();
     },
     async resetChat() {
       await fetch('/api/reset-chat', { method: 'POST' });
       this.chatCount = 0;
+      await this.loadUnmatched();
       await this.loadCompare();
     },
     async resetPdf() {
       await fetch('/api/reset-pdf', { method: 'POST' });
       this.appsFile = '';
       this.appsCount = 0;
+      await this.loadUnmatched();
       await this.loadCompare();
     },
     async addMaster() {
@@ -106,10 +139,31 @@ createApp({
       await fetch('/api/masters/' + id, { method: 'DELETE' });
       await this.loadMasters();
       await this.loadCompare();
+    },
+    async registerChat(name) {
+      await fetch('/api/masters/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_name: name, apps_name: '' })
+      });
+      await this.loadMasters();
+      await this.loadUnmatched();
+      await this.loadCompare();
+    },
+    async registerApps(name) {
+      await fetch('/api/masters/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_name: '', apps_name: name })
+      });
+      await this.loadMasters();
+      await this.loadUnmatched();
+      await this.loadCompare();
     }
   },
   async mounted() {
     await this.loadMasters();
+    await this.loadUnmatched();
     await this.loadCompare();
   }
 }).mount('#app');

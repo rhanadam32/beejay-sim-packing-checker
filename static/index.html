@@ -5,6 +5,9 @@
   <title>Packing Checker</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <style>
+    .sticky-head th { position: sticky; top: 0; z-index: 1; }
+  </style>
 </head>
 <body class="bg-slate-50 text-slate-900">
 <div id="app" class="max-w-6xl mx-auto p-6">
@@ -21,6 +24,10 @@
     <div>
       <label class="block text-sm font-medium mb-1">Upload Chat (.txt)</label>
       <input type="file" accept=".txt" @change="uploadChat" class="block w-full text-sm">
+      <div class="mt-2">
+        <textarea v-model="chatPaste" rows="4" placeholder="Atau paste isi chat di sini..." class="border rounded-md px-2 py-1 text-sm w-full"></textarea>
+        <button @click="uploadChatPaste" class="mt-1 px-3 py-1 rounded-md bg-slate-900 text-white text-sm">Parse Paste</button>
+      </div>
       <div class="mt-2 flex gap-2">
         <button @click="resetChat" class="px-3 py-1 rounded-md border text-sm hover:bg-slate-100">Reset Chat</button>
         <span v-if="chatCount" class="text-sm text-slate-600">Chat: {{ chatCount }} produk</span>
@@ -38,7 +45,7 @@
 
   <!-- Compare -->
   <div v-if="tab==='compare'" class="bg-white rounded-lg border p-4">
-    <div class="flex items-center gap-2 mb-3">
+    <div class="flex items-center gap-2 mb-3 flex-wrap">
       <button @click="loadCompare" class="px-3 py-1 rounded-md bg-slate-900 text-white text-sm">Refresh</button>
       <select v-model="filter" class="border rounded-md px-2 py-1 text-sm">
         <option value="all">Semua</option>
@@ -46,17 +53,18 @@
         <option value="MISSING">Missing</option>
         <option value="OK">OK</option>
       </select>
+      <input v-model="searchCompare" placeholder="Cari..." class="border rounded-md px-2 py-1 text-sm flex-1">
     </div>
-    <div class="overflow-auto">
+    <div class="overflow-auto max-h-96">
       <table class="w-full text-sm border-collapse">
-        <thead class="bg-slate-100">
+        <thead class="bg-slate-100 sticky-head">
           <tr>
-            <th class="border px-2 py-1 text-left">#</th>
-            <th class="border px-2 py-1 text-left">Produk Chat</th>
-            <th class="border px-2 py-1">Chat</th>
-            <th class="border px-2 py-1 text-left">Produk Apps</th>
-            <th class="border px-2 py-1">Apps</th>
-            <th class="border px-2 py-1">Status</th>
+            <th class="border px-2 py-1 bg-slate-100 text-left">#</th>
+            <th class="border px-2 py-1 bg-slate-100 text-left">Produk Chat</th>
+            <th class="border px-2 py-1 bg-slate-100">Chat</th>
+            <th class="border px-2 py-1 bg-slate-100 text-left">Produk Apps</th>
+            <th class="border px-2 py-1 bg-slate-100">Apps</th>
+            <th class="border px-2 py-1 bg-slate-100">Status</th>
           </tr>
         </thead>
         <tbody>
@@ -73,6 +81,29 @@
         </tbody>
       </table>
     </div>
+
+    <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="border rounded-md p-3">
+        <h3 class="font-semibold text-sm mb-2">Chat belum terdaftar</h3>
+        <ul class="text-sm space-y-1">
+          <li v-for="c in unmatched.chat" :key="c" class="flex items-center justify-between gap-2">
+            <span class="truncate">{{ c }}</span>
+            <button @click="registerChat(c)" class="px-2 py-0.5 rounded bg-slate-900 text-white text-xs">Tambah</button>
+          </li>
+          <li v-if="!unmatched.chat.length" class="text-slate-400">Tidak ada</li>
+        </ul>
+      </div>
+      <div class="border rounded-md p-3">
+        <h3 class="font-semibold text-sm mb-2">Apps belum terdaftar</h3>
+        <ul class="text-sm space-y-1">
+          <li v-for="a in unmatched.apps" :key="a" class="flex items-center justify-between gap-2">
+            <span class="truncate">{{ a }}</span>
+            <button @click="registerApps(a)" class="px-2 py-0.5 rounded bg-slate-900 text-white text-xs">Tambah</button>
+          </li>
+          <li v-if="!unmatched.apps.length" class="text-slate-400">Tidak ada</li>
+        </ul>
+      </div>
+    </div>
   </div>
 
   <!-- Master CRUD -->
@@ -82,18 +113,19 @@
       <input v-model="newApps" placeholder="Master product apps" class="border rounded-md px-2 py-1 text-sm flex-1">
       <button @click="addMaster" class="px-3 py-1 rounded-md bg-slate-900 text-white text-sm">Tambah</button>
     </div>
-    <div class="overflow-auto">
+    <input v-model="searchMaster" placeholder="Cari master..." class="border rounded-md px-2 py-1 text-sm w-full">
+    <div class="overflow-auto max-h-96">
       <table class="w-full text-sm border-collapse">
-        <thead class="bg-slate-100">
+        <thead class="bg-slate-100 sticky-head">
           <tr>
-            <th class="border px-2 py-1">#</th>
-            <th class="border px-2 py-1 text-left">Chat</th>
-            <th class="border px-2 py-1 text-left">Apps</th>
-            <th class="border px-2 py-1">Aksi</th>
+            <th class="border px-2 py-1 bg-slate-100">#</th>
+            <th class="border px-2 py-1 bg-slate-100 text-left">Chat</th>
+            <th class="border px-2 py-1 bg-slate-100 text-left">Apps</th>
+            <th class="border px-2 py-1 bg-slate-100">Aksi</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="m in masters" :key="m.id">
+          <tr v-for="m in filteredMasters" :key="m.id">
             <td class="border px-2 py-1">{{ m.id }}</td>
             <td class="border px-2 py-1">
               <input v-if="editing===m.id" v-model="editChat" class="border rounded px-1 py-0.5 w-full">

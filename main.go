@@ -36,11 +36,14 @@ type Row struct {
 }
 
 var (
-	mu       sync.Mutex
-	masters  []Master
-	chatMap  = map[string]int{}
-	appsMap  = map[string]int{}
-	appsFile = ""
+	mu           sync.Mutex
+	masters      []Master
+	chatMap      = map[string]int{}
+	chatOrig     = map[string]string{}
+	appsMap      = map[string]int{}
+	appsAllMap   = map[string]int{}
+	appsAllOrig  = map[string]string{}
+	appsFile     = ""
 )
 
 func normalize(s string) string {
@@ -191,7 +194,7 @@ func nextID() int {
 	return max + 1
 }
 
-func parseChat(text string) map[string]int {
+func parseChat(text string, orig map[string]string) map[string]int {
 	m := map[string]int{}
 	inLuke := false
 	scanner := bufio.NewScanner(strings.NewReader(text))
@@ -210,6 +213,9 @@ func parseChat(text string) map[string]int {
 		}
 		parts := strings.SplitN(line, "=", 2)
 		name := strings.TrimSpace(parts[0])
+		if strings.EqualFold(name, "Total") {
+			continue
+		}
 		valPart := strings.TrimSpace(parts[1])
 		re := regexp.MustCompile(`\d+`)
 		numStr := re.FindString(valPart)
@@ -221,6 +227,7 @@ func parseChat(text string) map[string]int {
 			name = "Luke " + name
 		}
 		m[normalize(name)] = num
+		orig[normalize(name)] = name
 	}
 	return m
 }
@@ -243,6 +250,128 @@ func parseAppsPDF(text string) map[string]int {
 		}
 	}
 	return result
+}
+
+func isSizeToken(s string) bool {
+	return regexp.MustCompile(`^[0-9][0-9/x+]*$`).MatchString(s)
+}
+
+func parseAppsPDFAll(text string, orig map[string]string) map[string]int {
+	result := map[string]int{}
+	lines := strings.Split(text, "\n")
+	var cleaned []string
+	for _, l := range lines {
+		l = strings.TrimSpace(l)
+		if l == "" {
+			continue
+		}
+		cleaned = append(cleaned, l)
+	}
+	i := 0
+	for i < len(cleaned) {
+		var nameParts []string
+		for i < len(cleaned) && !isSizeToken(cleaned[i]) {
+			if len(nameParts) == 0 && !strings.Contains(cleaned[i], ",") {
+				i++
+				continue
+			}
+			nameParts = append(nameParts, cleaned[i])
+			i++
+		}
+		if i >= len(cleaned) {
+			break
+		}
+		i++ // skip size
+		qtyStr := ""
+		for i < len(cleaned) && qtyStr == "" {
+			if regexp.MustCompile(`^\d+$`).MatchString(cleaned[i]) {
+				qtyStr = cleaned[i]
+			}
+			i++
+		}
+		name := normalize(strings.Join(nameParts, " "))
+		if name == "" || !strings.Contains(name, ",") {
+			continue
+		}
+		q, _ := strconv.Atoi(qtyStr)
+		result[name] += q
+		if _, ok := orig[name]; !ok {
+			orig[name] = strings.Join(nameParts, " ")
+		}
+	}
+	return result
+}
+
+func unmatchedChat() []string {
+	var out []string
+	for k, orig := range chatOrig {
+		matched := false
+		for _, m := range masters {
+			if levenshtein(k, normalize(m.ChatName)) == 0 {
+				matched = true
+				break
+			}
+		}
+		if !matched {
+			out = append(out, orig)
+		}
+	}
+	return out
+}
+
+func unmatchedApps() []string {
+	var out []string
+	for k, orig := range appsAllOrig {
+		matched := false
+		for _, m := range masters {
+			if levenshtein(k, normalize(m.AppsName)) == 0 {
+				matched = true
+				break
+			}
+		}
+		if !matched {
+			out = append(out, orig)
+		}
+	}
+	return out
+}
+
+func handleUnmatched(w http.ResponseWriter, r *http.Request) {
+	mu.Lock()
+	defer mu.Unlock()
+	chat := unmatchedChat()
+	apps := unmatchedApps()
+	if chat == nil {
+		chat = []string{}
+	}
+	if apps == nil {
+		apps = []string{}
+	}
+	writeJSON(w, map[string]interface{}{
+		"chat": chat,
+		"apps": apps,
+	})
+}
+
+func handleRegister(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method", 405)
+		return
+	}
+	var body struct {
+		ChatName string `json:"chat_name"`
+		AppsName string `json:"apps_name"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	m := Master{ID: nextID(), ChatName: body.ChatName, AppsName: body.AppsName}
+	masters = append(masters, m)
+	saveMaster()
+	writeJSON(w, m)
 }
 
 func extractPDFText(path string) (string, error) {
@@ -304,16 +433,33 @@ func handleUploadChat(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method", 405)
 		return
 	}
-	file, _, err := r.FormFile("file")
-	if err != nil {
-		http.Error(w, err.Error(), 400)
-		return
+	var text string
+	ct := r.Header.Get("Content-Type")
+	if strings.HasPrefix(ct, "application/json") {
+		var body struct {
+			Text string `json:"text"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			http.Error(w, err.Error(), 400)
+			return
+		}
+		text = body.Text
+	} else if strings.HasPrefix(ct, "text/plain") {
+		b, _ := io.ReadAll(r.Body)
+		text = string(b)
+	} else {
+		file, _, err := r.FormFile("file")
+		if err != nil {
+			http.Error(w, err.Error(), 400)
+			return
+		}
+		defer file.Close()
+		b, _ := io.ReadAll(file)
+		text = string(b)
 	}
-	defer file.Close()
-	b, _ := io.ReadAll(file)
-	text := string(b)
-	m := parseChat(text)
 	mu.Lock()
+	chatOrig = map[string]string{}
+	m := parseChat(text, chatOrig)
 	chatMap = m
 	mu.Unlock()
 	writeJSON(w, map[string]interface{}{"count": len(m)})
@@ -342,9 +488,17 @@ func handleUploadPDF(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	parsed := parseAppsPDF(text)
+	allParsed := parseAppsPDFAll(text, appsAllOrig)
 	mu.Lock()
 	for k, v := range parsed {
 		appsMap[k] += v
+	}
+	for k, v := range allParsed {
+		appsAllMap[k] += v
+		if _, ok := appsAllOrig[k]; !ok {
+			// find original from allParsed? store normalized as original fallback
+			appsAllOrig[k] = k
+		}
 	}
 	if appsFile == "" {
 		appsFile = hdr.Filename
@@ -359,6 +513,7 @@ func handleUploadPDF(w http.ResponseWriter, r *http.Request) {
 func handleResetChat(w http.ResponseWriter, r *http.Request) {
 	mu.Lock()
 	chatMap = map[string]int{}
+	chatOrig = map[string]string{}
 	mu.Unlock()
 	writeJSON(w, map[string]string{"status": "ok"})
 }
@@ -366,6 +521,8 @@ func handleResetChat(w http.ResponseWriter, r *http.Request) {
 func handleResetPDF(w http.ResponseWriter, r *http.Request) {
 	mu.Lock()
 	appsMap = map[string]int{}
+	appsAllMap = map[string]int{}
+	appsAllOrig = map[string]string{}
 	appsFile = ""
 	mu.Unlock()
 	writeJSON(w, map[string]string{"status": "ok"})
@@ -435,9 +592,9 @@ func handleMasterItem(w http.ResponseWriter, r *http.Request) {
 func main() {
 	loadMaster("database/data master.csv")
 	if b, err := os.ReadFile("packing from chat/chat.txt"); err == nil {
-		m := parseChat(string(b))
 		mu.Lock()
-		chatMap = m
+		chatOrig = map[string]string{}
+		chatMap = parseChat(string(b), chatOrig)
 		mu.Unlock()
 	}
 
@@ -453,6 +610,8 @@ func main() {
 	mux.HandleFunc("/api/reset-pdf", handleResetPDF)
 	mux.HandleFunc("/api/masters", handleMasters)
 	mux.HandleFunc("/api/masters/", handleMasterItem)
+	mux.HandleFunc("/api/unmatched", handleUnmatched)
+	mux.HandleFunc("/api/masters/register", handleRegister)
 
 	fmt.Println("Server running at http://localhost:8080")
 	http.ListenAndServe(":8080", mux)

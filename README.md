@@ -70,7 +70,10 @@ Tab **Perbandingan** menampilkan tabel:
 
 Pencocokan nama menggunakan normalisasi (lowercase, collapse spasi) + fuzzy (Levenshtein ≤ 3) untuk toleransi typo.
 
-### 5. Reset
+### 5. Item Belum Terdaftar & Register
+Di tab Perbandingan, jika ada item chat/PDF yang tidak cocok dengan master, akan muncul daftar "Chat belum terdaftar" / "Apps belum terdaftar". Klik **Tambah** untuk mendaftarkannya sebagai master baru (satu sisi bisa kosong, lalu edit di tab Master CRUD).
+
+### 6. Reset
 Tombol **Reset Chat** / **Reset PDF** mengosongkan data yang sudah di-upload tanpa menghapus file sumber.
 
 ### 6. CRUD Master
@@ -107,6 +110,8 @@ packing-checker/
 | POST | `/api/upload-pdf` | Upload PDF tally |
 | POST | `/api/reset-chat` | Reset data chat |
 | POST | `/api/reset-pdf` | Reset data PDF |
+| GET | `/api/unmatched` | Daftar item chat/PDF yang belum terdaftar |
+| POST | `/api/masters/register` | Register item baru ke master |
 | GET | `/api/masters` | List master |
 | POST | `/api/masters` | Tambah master |
 | PUT | `/api/masters/{id}` | Update master |

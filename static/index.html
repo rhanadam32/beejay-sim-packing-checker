@@ -40,6 +40,14 @@
         <li v-for="f in pdfFiles" :key="f.name">{{ f.name }}</li>
       </ul>
       <button @click="uploadPdfSelected" :disabled="!pdfFiles.length" class="mt-1 px-3 py-1 rounded-md bg-slate-900 text-white text-sm disabled:opacity-40">Upload &amp; Merge</button>
+      <div v-if="uploadResults.length" class="mt-2 text-xs space-y-1">
+        <div v-for="r in uploadResults" :key="r.name">
+          <span class="font-medium">{{ r.name }}</span>:
+          <span v-if="r.error" class="text-red-600">{{ r.error }}</span>
+          <span v-else-if="r.dup" class="text-orange-600">duplikat (qty digabung)</span>
+          <span v-else class="text-green-600">{{ r.count }} item terbaca</span>
+        </div>
+      </div>
       <div class="mt-2 flex gap-2 items-center">
         <button @click="resetPdf" class="px-3 py-1 rounded-md border text-sm hover:bg-slate-100">Reset PDF</button>
         <span v-if="appsFile" class="text-sm text-slate-600">{{ appsFile }} ({{ appsCount }} produk)</span>
@@ -54,10 +62,21 @@
       <select v-model="filter" class="border rounded-md px-2 py-1 text-sm">
         <option value="all">Semua</option>
         <option value="MISMATCH">Mismatch</option>
-        <option value="MISSING">Missing</option>
+        <option value="HANYA DI CHAT">Hanya di Chat</option>
+        <option value="HANYA DI APPS">Hanya di Apps</option>
         <option value="OK">OK</option>
       </select>
       <input v-model="searchCompare" placeholder="Cari..." class="border rounded-md px-2 py-1 text-sm flex-1">
+      <button @click="exportCSV" class="px-3 py-1 rounded-md border text-sm">Export CSV</button>
+    </div>
+    <div v-if="summary" class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3 text-sm">
+      <div class="border rounded p-2">OK: {{ summary.ok }}</div>
+      <div class="border rounded p-2">Mismatch: {{ summary.mismatch }}</div>
+      <div class="border rounded p-2">Hanya Chat: {{ summary.only_chat }}</div>
+      <div class="border rounded p-2">Hanya Apps: {{ summary.only_apps }}</div>
+      <div class="border rounded p-2">Total Chat: {{ summary.total_chat_qty }}</div>
+      <div class="border rounded p-2">Total Apps: {{ summary.total_apps_qty }}</div>
+      <div class="border rounded p-2">Selisih Total: {{ summary.total_delta }}</div>
     </div>
     <div class="overflow-auto max-h-96">
       <table class="w-full text-sm border-collapse">
@@ -68,6 +87,7 @@
             <th class="border px-2 py-1 bg-slate-100">Chat</th>
             <th class="border px-2 py-1 bg-slate-100 text-left">Produk Apps</th>
             <th class="border px-2 py-1 bg-slate-100">Apps</th>
+            <th class="border px-2 py-1 bg-slate-100">Δ</th>
             <th class="border px-2 py-1 bg-slate-100">Status</th>
           </tr>
         </thead>
@@ -78,6 +98,7 @@
             <td class="border px-2 py-1 text-center">{{ r.chat_found ? r.chat_qty : '-' }}</td>
             <td class="border px-2 py-1">{{ r.apps_name }}</td>
             <td class="border px-2 py-1 text-center">{{ r.apps_found ? r.apps_qty : '-' }}</td>
+            <td class="border px-2 py-1 text-center">{{ r.delta }}</td>
             <td class="border px-2 py-1 text-center">
               <span :class="badge(r.status)" class="px-2 py-0.5 rounded-full text-xs font-medium">{{ r.status }}</span>
             </td>
@@ -115,7 +136,12 @@
     <div class="flex gap-2">
       <input v-model="newChat" placeholder="Master product chat" class="border rounded-md px-2 py-1 text-sm flex-1">
       <input v-model="newApps" placeholder="Master product apps" class="border rounded-md px-2 py-1 text-sm flex-1">
+      <input v-model="newAlias" placeholder="Alias chat (pisah |)" class="border rounded-md px-2 py-1 text-sm flex-1">
       <button @click="addMaster" class="px-3 py-1 rounded-md bg-slate-900 text-white text-sm">Tambah</button>
+    </div>
+    <div class="flex gap-2">
+      <button @click="undoMaster" class="px-3 py-1 rounded-md border text-sm">Undo</button>
+      <button @click="redoMaster" class="px-3 py-1 rounded-md border text-sm">Redo</button>
     </div>
     <input v-model="searchMaster" placeholder="Cari master..." class="border rounded-md px-2 py-1 text-sm w-full">
     <div class="overflow-auto max-h-96">
@@ -156,6 +182,6 @@
   </div>
 </div>
 
-<script src="/static/app.js?v=3"></script>
+<script src="/static/app.js?v=6"></script>
 </body>
 </html>

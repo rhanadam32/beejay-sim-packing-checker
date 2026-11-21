@@ -103,18 +103,6 @@ func findChatQty(name string) (int, bool) {
 	if v, ok := chatMap[key]; ok {
 		return v, true
 	}
-	bestDist := 4
-	bestKey := ""
-	for k := range chatMap {
-		d := levenshtein(key, k)
-		if d < bestDist {
-			bestDist = d
-			bestKey = k
-		}
-	}
-	if bestKey != "" {
-		return chatMap[bestKey], true
-	}
 	return 0, false
 }
 
@@ -122,18 +110,6 @@ func findAppsQty(name string) (int, bool) {
 	key := normalize(name)
 	if v, ok := appsMap[key]; ok {
 		return v, true
-	}
-	bestDist := 4
-	bestKey := ""
-	for k := range appsMap {
-		d := levenshtein(key, k)
-		if d < bestDist {
-			bestDist = d
-			bestKey = k
-		}
-	}
-	if bestKey != "" {
-		return appsMap[bestKey], true
 	}
 	return 0, false
 }
@@ -470,40 +446,50 @@ func handleUploadPDF(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method", 405)
 		return
 	}
-	file, hdr, err := r.FormFile("file")
-	if err != nil {
+	if err := r.ParseMultipartForm(32 << 20); err != nil {
 		http.Error(w, err.Error(), 400)
 		return
 	}
-	defer file.Close()
-	tmpDir := os.TempDir()
-	tmpPath := filepath.Join(tmpDir, hdr.Filename)
-	out, _ := os.Create(tmpPath)
-	io.Copy(out, file)
-	out.Close()
-	text, err := extractPDFText(tmpPath)
-	os.Remove(tmpPath)
-	if err != nil {
-		http.Error(w, err.Error(), 500)
+	files := r.MultipartForm.File["file"]
+	if len(files) == 0 {
+		http.Error(w, "no file", 400)
 		return
 	}
-	parsed := parseAppsPDF(text)
-	allParsed := parseAppsPDFAll(text, appsAllOrig)
+	var names []string
 	mu.Lock()
-	for k, v := range parsed {
-		appsMap[k] += v
-	}
-	for k, v := range allParsed {
-		appsAllMap[k] += v
-		if _, ok := appsAllOrig[k]; !ok {
-			// find original from allParsed? store normalized as original fallback
-			appsAllOrig[k] = k
+	for _, fh := range files {
+		f, err := fh.Open()
+		if err != nil {
+			continue
 		}
+		tmpDir := os.TempDir()
+		tmpPath := filepath.Join(tmpDir, fh.Filename)
+		out, _ := os.Create(tmpPath)
+		io.Copy(out, f)
+		out.Close()
+		f.Close()
+		text, err := extractPDFText(tmpPath)
+		os.Remove(tmpPath)
+		if err != nil {
+			continue
+		}
+		parsed := parseAppsPDF(text)
+		allParsed := parseAppsPDFAll(text, appsAllOrig)
+		for k, v := range parsed {
+			appsMap[k] += v
+		}
+		for k, v := range allParsed {
+			appsAllMap[k] += v
+			if _, ok := appsAllOrig[k]; !ok {
+				appsAllOrig[k] = k
+			}
+		}
+		names = append(names, fh.Filename)
 	}
 	if appsFile == "" {
-		appsFile = hdr.Filename
+		appsFile = strings.Join(names, ", ")
 	} else {
-		appsFile = appsFile + ", " + hdr.Filename
+		appsFile = appsFile + ", " + strings.Join(names, ", ")
 	}
 	total := len(appsMap)
 	mu.Unlock()

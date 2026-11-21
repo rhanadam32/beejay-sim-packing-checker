@@ -34,8 +34,12 @@
       </div>
     </div>
     <div>
-      <label class="block text-sm font-medium mb-1">Upload Apps PDF</label>
-      <input type="file" accept=".pdf" @change="uploadPdf" class="block w-full text-sm">
+      <label class="block text-sm font-medium mb-1">Upload Apps PDF (bisa banyak file)</label>
+      <input type="file" accept=".pdf" multiple @change="onPdfSelect" class="block w-full text-sm">
+      <ul v-if="pdfFiles.length" class="mt-1 text-xs text-slate-600 list-disc pl-5">
+        <li v-for="f in pdfFiles" :key="f.name">{{ f.name }}</li>
+      </ul>
+      <button @click="uploadPdfSelected" :disabled="!pdfFiles.length" class="mt-1 px-3 py-1 rounded-md bg-slate-900 text-white text-sm disabled:opacity-40">Upload &amp; Merge</button>
       <div class="mt-2 flex gap-2 items-center">
         <button @click="resetPdf" class="px-3 py-1 rounded-md border text-sm hover:bg-slate-100">Reset PDF</button>
         <span v-if="appsFile" class="text-sm text-slate-600">{{ appsFile }} ({{ appsCount }} produk)</span>
@@ -152,6 +156,6 @@
   </div>
 </div>
 
-<script src="/static/app.js"></script>
+<script src="/static/app.js?v=3"></script>
 </body>
 </html>

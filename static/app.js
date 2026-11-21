@@ -14,6 +14,7 @@ createApp({
       searchCompare: '',
       searchMaster: '',
       chatPaste: '',
+      pdfFiles: [],
       newChat: '',
       newApps: '',
       editing: null,
@@ -82,15 +83,18 @@ createApp({
       await this.loadUnmatched();
       await this.loadCompare();
     },
-    async uploadPdf(e) {
-      const file = e.target.files[0];
-      if (!file) return;
+    onPdfSelect(e) {
+      this.pdfFiles = Array.from(e.target.files || []);
+    },
+    async uploadPdfSelected() {
+      if (!this.pdfFiles.length) return;
       const fd = new FormData();
-      fd.append('file', file);
+      for (const f of this.pdfFiles) fd.append('file', f);
       const res = await fetch('/api/upload-pdf', { method: 'POST', body: fd });
       const j = await res.json();
       this.appsFile = j.file;
       this.appsCount = j.count;
+      this.pdfFiles = [];
       await this.loadUnmatched();
       await this.loadCompare();
     },
